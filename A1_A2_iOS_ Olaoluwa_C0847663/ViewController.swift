@@ -13,6 +13,7 @@ class ViewController: UIViewController, MKMapViewDelegate,CLLocationManagerDeleg
     var locationManager = CLLocationManager()
     var lat = CLLocationDegrees()
     var lng = CLLocationDegrees()
+    var pressCount = 0
     @IBOutlet weak var displayArea: UILabel!
     @IBOutlet weak var mapView: MKMapView!
     override func viewDidLoad() {
@@ -20,11 +21,38 @@ class ViewController: UIViewController, MKMapViewDelegate,CLLocationManagerDeleg
         // Do any additional setup after loading the view.
         mapView.delegate = self
         locationManager.delegate = self
-        mapView.isZoomEnabled = false
+//        mapView.isZoomEnabled = false
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.requestWhenInUseAuthorization()
         locationManager.startUpdatingLocation()
+        let lngTap = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress))
+        mapView.addGestureRecognizer(lngTap)
+
     
+    }
+    @objc func handleLongPress(_ gestureRecognizer: UILongPressGestureRecognizer){
+        if gestureRecognizer.state == UIGestureRecognizer.State.ended{
+        pressCount += 1
+        print(pressCount)
+        var title:String;
+        switch pressCount{
+                    case 1:
+                        title = "A"
+                    case 2:
+                        title = "B"
+                    case 3:
+                        title = "C"
+                    default:
+                        title = "Outside Bounds"
+        }
+            let pressPoint = gestureRecognizer.location(in: mapView)
+            let coordinate = mapView.convert(pressPoint, toCoordinateFrom: mapView)
+            let annotation = MKPointAnnotation()
+            annotation.coordinate = coordinate
+            annotation.subtitle = "My Point"
+            annotation.title = title
+            mapView.addAnnotation(annotation)
+        }
     }
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         let location = locations.last
@@ -89,6 +117,28 @@ class ViewController: UIViewController, MKMapViewDelegate,CLLocationManagerDeleg
             mapView.addAnnotation(pin)
 
     
+    }
+    
+    func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+        if annotation is MKUserLocation{
+            return nil
+        }
+
+           if annotation.title != "User"{
+               print("we are here")
+               let annotationView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: "droppable")
+               annotationView.animatesDrop = true
+               annotationView.pinTintColor = .green
+               
+               return annotationView
+           }
+             
+           else{
+               print("we are not here")
+               return nil
+           }
+           return nil
+       
     }
 
 
