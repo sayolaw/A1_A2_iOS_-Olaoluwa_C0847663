@@ -30,7 +30,7 @@ class ViewController: UIViewController, MKMapViewDelegate,CLLocationManagerDeleg
         let location = locations.last
         lat = location?.coordinate.latitude ?? 0.0
         lng = location?.coordinate.longitude ?? 0.0
-//        displayLocation(latitude:lat, longitude: lng, title: "User", subtitile: "My location")
+        displayLocation(latitude:lat, longitude: lng, title: "User", subtitile: "My location")
         if let location = location {
             CLGeocoder().reverseGeocodeLocation(location){ placemarks, error in
                 if error != nil{
@@ -76,13 +76,18 @@ class ViewController: UIViewController, MKMapViewDelegate,CLLocationManagerDeleg
         longitude:CLLocationDegrees,
         title: String,
         subtitile: String){
-            print(latitude)
             let latDelta: CLLocationDegrees = 0.05
             let lngDelat:CLLocationDegrees = 0.05
             let span = MKCoordinateSpan(latitudeDelta: latDelta, longitudeDelta: lngDelat)
             let location = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-//            let region = MKCoordinateRegion(center: location, span: span)
-//            mapView.setRegion(region, animated: true)
+            let region = MKCoordinateRegion(center: location, span: span)
+            mapView.setRegion(region, animated: true)
+            let pin = MKPointAnnotation()
+            pin.coordinate = location
+            pin.subtitle = "User Location"
+            pin.title = "User"
+            mapView.addAnnotation(pin)
+
     
     }
 
