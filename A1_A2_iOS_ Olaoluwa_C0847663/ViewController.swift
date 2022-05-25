@@ -53,6 +53,19 @@ class ViewController: UIViewController, MKMapViewDelegate,CLLocationManagerDeleg
     }
     @IBAction func Directions(_ sender: UIButton) {
         mapView.removeOverlays(mapView.overlays)
+        for i in mapView.annotations{
+            switch title{
+            case "A":
+                destinationa = i.coordinate
+            case "B":
+                destinationb = i.coordinate
+            case "C":
+                destinationc = i.coordinate
+            default:
+                print("None Applicable")
+                
+            }
+        }
         getDirections(source:destinationa, newdestination: destinationb)
         getDirections(source:destinationb, newdestination: destinationc)
         getDirections(source:destinationc, newdestination: destinationa)
@@ -72,8 +85,17 @@ class ViewController: UIViewController, MKMapViewDelegate,CLLocationManagerDeleg
         locationManager.startUpdatingLocation()
         let lngTap = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress))
         mapView.addGestureRecognizer(lngTap)
+        let tap = UITapGestureRecognizer(target: self, action: #selector(tapped))
+        tap.numberOfTapsRequired = 1
+        view.addGestureRecognizer(tap)
+
 
     
+    }
+    @objc func tapped(_ gestureRecognizer: UITapGestureRecognizer){
+        if gestureRecognizer.state  == .ended{
+            print("i tap tap tap on the phone")
+        }
     }
     @objc func handleLongPress(_ gestureRecognizer: UILongPressGestureRecognizer){
         if gestureRecognizer.state == UIGestureRecognizer.State.ended{
@@ -105,7 +127,10 @@ class ViewController: UIViewController, MKMapViewDelegate,CLLocationManagerDeleg
             
             
             distance = (thisLocation.distance(from:nextLocation))/1000.00
-            
+            let alertController = UIAlertController(title: "Distance From Location", message: "\(distance)km", preferredStyle: .alert)
+            let cancelAction = UIAlertAction(title: "OK", style: .cancel, handler: nil)
+            alertController.addAction(cancelAction)
+            present(alertController, animated: true, completion: nil)
             print("\(distance) Km");
             coordinatesArr.append(coordinate)
             let annotation = MKPointAnnotation()
