@@ -13,8 +13,52 @@ class ViewController: UIViewController, MKMapViewDelegate,CLLocationManagerDeleg
     var locationManager = CLLocationManager()
     var lat = CLLocationDegrees()
     var lng = CLLocationDegrees()
+    var distance = 0.0
+    var destinationa: CLLocationCoordinate2D!
+    var destinationb: CLLocationCoordinate2D!
+    var destinationc: CLLocationCoordinate2D!
     var coordinatesArr = [CLLocationCoordinate2D]()
+    var userLocation = CLLocation()
     var pressCount = 0
+    
+    func getDirections(source:CLLocationCoordinate2D,newdestination:CLLocationCoordinate2D){
+        let sourcePlaceMark = MKPlacemark(coordinate: source)
+        let destinationPlaceMark = MKPlacemark(coordinate: newdestination)
+        
+        // request a direction
+        let directionRequest = MKDirections.Request()
+        
+        // assign the source and destination properties of the request
+        directionRequest.source = MKMapItem(placemark: sourcePlaceMark)
+        directionRequest.destination = MKMapItem(placemark: destinationPlaceMark)
+        
+        // transportation type
+        directionRequest.transportType = .automobile
+        
+        // calculate the direction
+        let directions = MKDirections(request: directionRequest)
+        directions.calculate { (response, error) in
+            guard let directionResponse = response else {return}
+            // create the route
+            let route = directionResponse.routes[0]
+            // drawing a polyline
+            self.mapView.addOverlay(route.polyline, level: .aboveRoads)
+            
+            // define the bounding map rect
+            let rect = route.polyline.boundingMapRect
+            self.mapView.setVisibleMapRect(rect, edgePadding: UIEdgeInsets(top: 100, left: 100, bottom: 100, right: 100), animated: true)
+            
+//            self.map.setRegion(MKCoordinateRegion(rect), animated: true)
+        }
+    }
+    @IBAction func Directions(_ sender: UIButton) {
+        mapView.removeOverlays(mapView.overlays)
+        getDirections(source:destinationa, newdestination: destinationb)
+        getDirections(source:destinationb, newdestination: destinationc)
+        getDirections(source:destinationc, newdestination: destinationa)
+        
+    }
+    
     @IBOutlet weak var displayArea: UILabel!
     @IBOutlet weak var mapView: MKMapView!
     override func viewDidLoad() {
@@ -36,31 +80,70 @@ class ViewController: UIViewController, MKMapViewDelegate,CLLocationManagerDeleg
         pressCount += 1
         print(pressCount)
         var title:String;
-        switch pressCount{
-                    case 1:
-                        title = "A"
-                    case 2:
-                        title = "B"
-                    case 3:
-                        title = "C"
-                    default:
-                        title = "Outside Bounds"
-        }
+        
             let pressPoint = gestureRecognizer.location(in: mapView)
             let coordinate = mapView.convert(pressPoint, toCoordinateFrom: mapView)
+            
+            switch pressCount{
+                        case 1:
+                            title = "A"
+                            destinationa = coordinate
+                            
+                        case 2:
+                            title = "B"
+                            destinationb = coordinate
+                        case 3:
+                            title = "C"
+                            destinationc = coordinate
+                        default:
+                            title = "Outside Bounds"
+            }
+            let nextLocation = CLLocation(latitude: lat, longitude: lng)
+            let thisLocation = CLLocation(latitude:coordinate.latitude, longitude: coordinate.longitude)
+            
+           
+            
+            
+            distance = (thisLocation.distance(from:nextLocation))/1000.00
+            
+            print("\(distance) Km");
             coordinatesArr.append(coordinate)
             let annotation = MKPointAnnotation()
             annotation.coordinate = coordinate
-            annotation.subtitle = "My Point"
+            annotation.subtitle = "\(distance)Km"
             annotation.title = title
             mapView.addAnnotation(annotation)
             if(pressCount==3){
-                addPolygon(coordinatesArr)
+                addPolygon()
+            }
+            if(pressCount==4){
+                mapView.removeAnnotations(mapView.annotations)
+                mapView.removeOverlays(mapView.overlays)
+                displayLocation(latitude: lat, longitude: lng, title: "User Location", subtitile: "This is the user location")
+                coordinatesArr.removeAll()
+                coordinatesArr.append(coordinate)
+                let annotation = MKPointAnnotation()
+                annotation.coordinate = coordinate
+                annotation.subtitle = "\(distance)Km"
+                annotation.title = title
+                mapView.addAnnotation(annotation)
+                
+                pressCount = 1
             }
         }
     }
-    func addPolygon(_ places:[CLLocationCoordinate2D]) {
-        let coordinates = places.map {$0}
+    func addPolygon() {
+      
+        var polArr = [CLLocationCoordinate2D]()
+        for i in mapView.annotations{
+            if(i.title != "User" ){
+                polArr.append(i.coordinate)
+            }
+            else{
+                
+            }
+        }
+        let coordinates = polArr.map {$0}
         let polygon = MKPolygon(coordinates: coordinates, count: coordinates.count)
         mapView.addOverlay(polygon)
     }
@@ -68,6 +151,7 @@ class ViewController: UIViewController, MKMapViewDelegate,CLLocationManagerDeleg
         let location = locations.last
         lat = location?.coordinate.latitude ?? 0.0
         lng = location?.coordinate.longitude ?? 0.0
+        
         displayLocation(latitude:lat, longitude: lng, title: "User", subtitile: "My location")
         if let location = location {
             CLGeocoder().reverseGeocodeLocation(location){ placemarks, error in
@@ -117,7 +201,9 @@ class ViewController: UIViewController, MKMapViewDelegate,CLLocationManagerDeleg
             let latDelta: CLLocationDegrees = 0.05
             let lngDelat:CLLocationDegrees = 0.05
             let span = MKCoordinateSpan(latitudeDelta: latDelta, longitudeDelta: lngDelat)
+            
             let location = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+            let userLocation = CLLocation(latitude: location.latitude, longitude: location.longitude)
             let region = MKCoordinateRegion(center: location, span: span)
             mapView.setRegion(region, animated: true)
             let pin = MKPointAnnotation()
@@ -128,7 +214,17 @@ class ViewController: UIViewController, MKMapViewDelegate,CLLocationManagerDeleg
 
     
     }
-    
+    func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+        mapView.removeAnnotation(view.annotation!)
+        pressCount -= 1
+        mapView.removeOverlays(mapView.overlays)
+    }
+    func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, calloutAccessoryControlTapped control: UIControl) {
+        let alertController = UIAlertController(title: "Distance From Location", message: "Hello", preferredStyle: .alert)
+        let cancelAction = UIAlertAction(title: "OK", style: .cancel, handler: nil)
+        alertController.addAction(cancelAction)
+        present(alertController, animated: true, completion: nil)
+    }
     func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
         if annotation is MKUserLocation{
             return nil
@@ -139,6 +235,10 @@ class ViewController: UIViewController, MKMapViewDelegate,CLLocationManagerDeleg
                let annotationView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: "droppable")
                annotationView.animatesDrop = true
                annotationView.pinTintColor = .green
+               annotationView.canShowCallout = true
+               annotationView.rightCalloutAccessoryView = UIButton(type: .detailDisclosure)
+
+               
                
                return annotationView
            }
@@ -151,22 +251,17 @@ class ViewController: UIViewController, MKMapViewDelegate,CLLocationManagerDeleg
        
     }
     func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
-        if overlay is MKCircle {
-            let rendrer = MKCircleRenderer(overlay: overlay)
-            rendrer.fillColor = UIColor.black.withAlphaComponent(0.5)
-            rendrer.strokeColor = UIColor.green
-            rendrer.lineWidth = 2
-            return rendrer
-        } else if overlay is MKPolyline {
-            let rendrer = MKPolylineRenderer(overlay: overlay)
-            rendrer.strokeColor = UIColor.blue
-            rendrer.lineWidth = 3
-            return rendrer
-        } else if overlay is MKPolygon {
+        if overlay is MKPolygon {
             let rendrer = MKPolygonRenderer(overlay: overlay)
             rendrer.fillColor = UIColor.red.withAlphaComponent(0.5)
             rendrer.strokeColor = UIColor.green
             rendrer.lineWidth = 2
+            return rendrer
+        }
+        else if overlay is MKPolyline {
+            let rendrer = MKPolylineRenderer(overlay: overlay)
+            rendrer.strokeColor = UIColor.blue
+            rendrer.lineWidth = 3
             return rendrer
         }
         return MKOverlayRenderer()
