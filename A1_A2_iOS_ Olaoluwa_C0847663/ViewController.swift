@@ -13,6 +13,7 @@ class ViewController: UIViewController, MKMapViewDelegate,CLLocationManagerDeleg
     var locationManager = CLLocationManager()
     var lat = CLLocationDegrees()
     var lng = CLLocationDegrees()
+    var coordinatesArr = [CLLocationCoordinate2D]()
     var pressCount = 0
     @IBOutlet weak var displayArea: UILabel!
     @IBOutlet weak var mapView: MKMapView!
@@ -47,12 +48,21 @@ class ViewController: UIViewController, MKMapViewDelegate,CLLocationManagerDeleg
         }
             let pressPoint = gestureRecognizer.location(in: mapView)
             let coordinate = mapView.convert(pressPoint, toCoordinateFrom: mapView)
+            coordinatesArr.append(coordinate)
             let annotation = MKPointAnnotation()
             annotation.coordinate = coordinate
             annotation.subtitle = "My Point"
             annotation.title = title
             mapView.addAnnotation(annotation)
+            if(pressCount==3){
+                addPolygon(coordinatesArr)
+            }
         }
+    }
+    func addPolygon(_ places:[CLLocationCoordinate2D]) {
+        let coordinates = places.map {$0}
+        let polygon = MKPolygon(coordinates: coordinates, count: coordinates.count)
+        mapView.addOverlay(polygon)
     }
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         let location = locations.last
@@ -139,6 +149,27 @@ class ViewController: UIViewController, MKMapViewDelegate,CLLocationManagerDeleg
            }
            return nil
        
+    }
+    func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+        if overlay is MKCircle {
+            let rendrer = MKCircleRenderer(overlay: overlay)
+            rendrer.fillColor = UIColor.black.withAlphaComponent(0.5)
+            rendrer.strokeColor = UIColor.green
+            rendrer.lineWidth = 2
+            return rendrer
+        } else if overlay is MKPolyline {
+            let rendrer = MKPolylineRenderer(overlay: overlay)
+            rendrer.strokeColor = UIColor.blue
+            rendrer.lineWidth = 3
+            return rendrer
+        } else if overlay is MKPolygon {
+            let rendrer = MKPolygonRenderer(overlay: overlay)
+            rendrer.fillColor = UIColor.red.withAlphaComponent(0.5)
+            rendrer.strokeColor = UIColor.green
+            rendrer.lineWidth = 2
+            return rendrer
+        }
+        return MKOverlayRenderer()
     }
 
 
